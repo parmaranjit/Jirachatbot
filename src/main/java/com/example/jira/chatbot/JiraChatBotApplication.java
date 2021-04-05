@@ -1,4 +1,4 @@
-package com.jira.chatbot;
+package com.example.jira.chatbot;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
