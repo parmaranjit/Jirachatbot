@@ -31,7 +31,8 @@ public class JiraChatBotApplication {
     private String userId;
     @Value("${user.token}")
     private String token;
-    private String projectName = "H3S";
+    @Value("${project.name}")
+    private String projectName;
 
     public static void main(String[] args) {
         SpringApplication.run(JiraChatBotApplication.class, args);
@@ -50,46 +51,51 @@ public class JiraChatBotApplication {
                     .asJson();
 
             queryResponse = fetchFieldsJson(response);
-        } catch (UnirestException e) {
+
+        } catch (Exception e) {
             System.out.println("Exception:" + e.getMessage());
+            return "{\"Exception\" : \"" + e.getMessage() + "\"}";
         }
         return String.valueOf(queryResponse);
     }
 
     private JSONArray fetchFieldsJson(HttpResponse<JsonNode> response) {
         JSONArray jsonResponse = new JSONArray();
-        JSONArray issues = (JSONArray) (response.getBody().getObject()).get("issues");
-        //System.out.println(issues);
-        for (Object itr : issues) {
-            String ticketId;
-            String ticketSummary;
-            String ticketState;
-            StringBuilder ticketCSFixVersion = new StringBuilder();
-            JSONObject jsonObject = new JSONObject();
+        try {
+            JSONArray issues = (JSONArray) (response.getBody().getObject()).get("issues");
+            for (Object itr : issues) {
+                String ticketId;
+                String ticketSummary;
+                String ticketState;
+                StringBuilder ticketCSFixVersion = new StringBuilder();
+                JSONObject jsonObject = new JSONObject();
 
-            JSONObject issue = (JSONObject) itr;
-            ticketId = (String) issue.get("key");
-            JSONObject fields = (JSONObject) issue.get("fields");
-            ticketSummary = (String) fields.get("summary");
-            JSONObject status = (JSONObject) fields.get("status");
-            ticketState = (String) status.get("name");
+                JSONObject issue = (JSONObject) itr;
+                ticketId = (String) issue.get("key");
+                JSONObject fields = (JSONObject) issue.get("fields");
+                ticketSummary = (String) fields.get("summary");
+                JSONObject status = (JSONObject) fields.get("status");
+                ticketState = (String) status.get("name");
 
-            if (ticketState.equalsIgnoreCase("Closed")) {
-                JSONArray fixVersions = (JSONArray) fields.get("fixVersions");
-                for (Object versionObject : fixVersions) {
-                    JSONObject fixVersion = (JSONObject) versionObject;
-                    ticketCSFixVersion.append(fixVersion.get("name")).append(" ");
+                if (ticketState.equalsIgnoreCase("Closed")) {
+                    JSONArray fixVersions = (JSONArray) fields.get("fixVersions");
+                    for (Object versionObject : fixVersions) {
+                        JSONObject fixVersion = (JSONObject) versionObject;
+                        ticketCSFixVersion.append(fixVersion.get("name")).append(" ");
+                    }
                 }
-            }
 
 
-            jsonObject.put("id", jiraUrl + "/browse/" + ticketId);
-            jsonObject.put("summary", ticketSummary);
-            jsonObject.put("state", ticketState);
-            if (ticketCSFixVersion.length() > 0) {
-                jsonObject.put("fixVersions", ticketCSFixVersion.toString().trim());
+                jsonObject.put("id", jiraUrl + "/browse/" + ticketId);
+                jsonObject.put("summary", ticketSummary);
+                jsonObject.put("state", ticketState);
+                if (ticketCSFixVersion.length() > 0) {
+                    jsonObject.put("fixVersions", ticketCSFixVersion.toString().trim());
+                }
+                jsonResponse.put(jsonObject);
             }
-            jsonResponse.put(jsonObject);
+        } catch (Exception e) {
+            jsonResponse.put(e.getMessage());
         }
 
         return jsonResponse;
